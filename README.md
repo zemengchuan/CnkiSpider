@@ -101,7 +101,9 @@ from CnkiSpider import AuthorSpider
 """
 如果只知道姓名，那么就需要author_recommend()函数的帮助
 运行按照提示确定作者的代码和第一机构即可
-最后使用get_all_recomment()方法获取所有文章，文件保存在当前目录下
+最后使用get_all_recomment()方法获取所有文章，
+如果get_all_recoment()获取的作者列表有误，可以输入re再次获取
+文件保存在当前目录下
 """
 
 cas = AuthorSpider('钟南山')
