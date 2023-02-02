@@ -20,7 +20,7 @@ CnkiSpider的高效来自于采用了多线程的方式进行爬取。目前仅�
 ## 安装方式
 
 ```python
-pip intall CnkiSpider
+pip install CnkiSpider
 ```
 
 
