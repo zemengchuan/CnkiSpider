@@ -1,5 +1,7 @@
 # CnkiSpider使用指南（by@zemengchuan）
 
+GitHub链接：https://github.com/zemengchuan/CnkiSpider
+
 ## 用途：
 
 CnkiSpider可以通过简单的代码实现高效的知网文章信息爬取，主要爬取的内容包括：【**标题、作者、发表时间、来源、链接**】，并将爬取的结果保存为CSV格式。经测试，某作者在知网上的821篇文章只需要2-4s即可全部获取（不同设备及网络情况可能会出现差异），效率相对而言比较高。
@@ -14,7 +16,6 @@ CnkiSpider的高效来自于采用了多线程的方式进行爬取。目前仅�
 
 - 不够灵活，必须有作者的姓名、代码和第一机构才可以搜索，不能仅通过作者名字搜索（CnkiSpider设有专门的函数帮助确认作者的代码和第一机构，详情见使用方式）
 - 目前仅支持中文搜索，英语搜索可能会出现问题
-- 不支持自定义CSV保存路径
 - 目前仅支持通过作者搜索
 
 ## 安装方式
@@ -41,7 +42,7 @@ from CnkiSpider import AuthorSpider
 """
 将author_name,author_code,institution三个参数传入AuthorSpider中，
 再使用get_all_article()方法即可快速获取该作者的所有文章
-文件保存在当前目录下
+文件保存在当前目录下，文件名为result
 """
 
 name = '钟南山' 
@@ -101,7 +102,7 @@ from CnkiSpider import AuthorSpider
 """
 如果只知道姓名，那么就需要author_recommend()函数的帮助
 运行按照提示确定作者的代码和第一机构即可
-最后使用get_all_recomment()方法获取所有文章，
+最后使用get_all_recomment()方法获取所有文章
 如果get_all_recoment()获取的作者列表有误，可以输入re再次获取
 文件保存在当前目录下
 """
@@ -174,6 +175,81 @@ author_recommend()会返回作者的姓名、代码和第一机构
 """
 ```
 
+- 如果希望得到该作者在知网上的文章类型概览，可以使用`.getinfo(save=True)`方法，save参数是用于选择是否需要保存概览的，默认为True，可以不填。如：
+
+```python
+from CnkiSpider import AuthorSpider
+
+"""
+getinfo()默认在当前目录下保存概览文件，如果不需要可以将save改为False，即
+getinfo(save=False)。保存的文件名为overview.csv
+"""
+
+name = '钟南山' 
+code = '000039361479' 
+inst = '中国工程院'
+cas = AuthorSpider(author_name=name,author_code=code,institution=inst)
+cas.getinfo()# cas.getinfo(save=False)
+
+"""
+输出结果为：
+
+钟南山在知网上共有记录820条，详细情况如下：
+总库:820篇
+学术期刊:699篇
+特色期刊:8篇
+学术辑刊:0篇
+学位论文:0篇
+博士:0篇
+硕士:0篇
+会议:109篇
+国内会议:103篇
+国际会议:6篇
+会议视频:0篇
+报纸:4篇
+年鉴:0篇
+专利:0篇
+中国专利:0篇
+海外专利:0篇
+图书:0篇
+外文图书:0篇
+中文图书:0篇
+标准:0篇
+国家标准:0篇
+行业标准:0篇
+标准题录:0篇
+成果:0篇
+古籍:0篇
+视频:0篇
+"""
+```
+
+
+
+- 设置输出文件保存路径可以通过`.path=`的方式修改
+
+```python
+from CnkiSpider import AuthorSpider
+
+"""
+将author_name,author_code,institution三个参数传入AuthorSpider中，
+再使用get_all_article()方法即可快速获取该作者的所有文章
+文件保存在当前目录下
+"""
+
+name = '钟南山' 
+code = '000039361479' 
+inst = '中国工程院'
+cas = AuthorSpider(author_name=name,author_code=code,institution=inst)
+cas.path = './new_dir/' 
+# 修改后以下两个函数保存的文件路径都会变为设置的路径，但是输出文件的名称无法更改
+cas.getinfo()
+cas.get_all_article()
+
+```
+
+
+
 ## 计划
 
 - 加入更多的搜索方式
@@ -192,6 +268,6 @@ author_recommend()会返回作者的姓名、代码和第一机构
   - 分类号
   - 文献来源
   - DOI
-- 加入自定义保存路径
 - 尝试用异步的方式，或许会有更高的效率
+- 加入图表分析
 - ……
