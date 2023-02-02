@@ -148,7 +148,7 @@ def QueryJson_choice(mode,name,code,institution):
         }
     else:
         print('模式错误')
-        QueryJson = None
+        QueryJson = ''
     return str(QueryJson)
 
 def get_SearchSql(text):

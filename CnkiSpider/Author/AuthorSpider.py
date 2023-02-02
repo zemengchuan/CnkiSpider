@@ -19,7 +19,7 @@ class AuthorSpider:
     __dic：对照表，可在para文件中设置para_dic
     path：文件保存路径设置，默认为当前工作目录下的作者姓名-作者第一机构-作者代码
     """
-    def __init__(self, author_name, author_code=None, institution=None):
+    def __init__(self, author_name, author_code='', institution=''):
         self.name = author_name
         self.code = author_code
         self.institution = institution
@@ -27,14 +27,14 @@ class AuthorSpider:
         self.__headers = default_headers
         self.__dic = para_dic
         self.path = f'./{self.name}-{self.institution}-{self.code}/'
-        self.SearchSql = None
-        self.check_list = []
-        self.df = pd.DataFrame(data=None)
-        self.df_list = []
-        self.total_page = 0
+        self.__SearchSql = ''
+        self.__df = pd.DataFrame(data=None)
+        self.__df_list = []
+        self.__total_page = 0
 
     # 创建存放路径path
     def __creatpath(self):
+        self.path = f'./{self.name}-{self.institution}-{self.code}/'
         if not os.path.exists(self.path):
             os.makedirs(self.path)
     
@@ -44,37 +44,32 @@ class AuthorSpider:
     # 获取返回的json文件
     def __getjson(self):
         url = 'https://kns.cnki.net/kns8/Group/ResGroup'
-        data = {'queryJson': QueryJson_choice(1), 'handleid': "0"}
+        data = {'queryJson': QueryJson_choice(mode=1,name=self.name,code=self.code,institution=self.institution), 'handleid': "0"}
         text2 = self.session.post(url=url, data=data, headers=self.__headers)
         text2.json()
         return text2.json()
     # 概览
     def getinfo(self, save=True):
-        if self.code == None | self.institution == None:
+        self.__get_cookies()
+        if (self.code == '') | (self.institution == ''):
             print("请输入作者的代码和机构，可以采用.author_recommend()方法获取")
-            return None
+            return 0
         js = self.__getjson()
-        dic = {}
+        dic = {
+            '项目':[],
+            '数量':[]
+        }
         for i in js:
             if i in self.__dic:
-                dic[self.__dic[i]] = js[i]
+                dic['项目'].append(self.__dic[i])
+                dic['数量'].append(js[i])
+        df = pd.DataFrame(dic,columns=['项目','数量'])
         if save:
-            self.__save(dic)
-        else:
-            print(f"{self.name}在知网上共有记录{dic['总库']}条，详细情况如下：")
-            for key in dic:
-                print(f"{key}:{dic[key]}篇")
-
+            df.to_csv(f"{self.path}overview.csv")
+        print(f"{self.name}在知网上共有记录{dic['数量'][0]}条，详细情况如下：")
+        for num in range(len(dic['数量'])):
+            print(f"{dic['项目'][num]}:{dic['数量'][num]}篇")
         return dic
-    # 保存概览文件函数
-    def __save(self, dic):
-        self.__creatpath()
-        with open(f"{self.path}overview.csv", "a", encoding='utf-8') as file:
-            print(f"{self.name}在知网上共有记录{dic['总库']}条，详细情况如下：")
-            for key in dic:
-                content = f"{key},{dic[key]}篇"
-                print(content.replace(',', ':'))
-                file.write(f"{content}\n")
 
     """
     利用线程池的方式快速获取相关作者列表，顺序同知网上输入作者名称时出现的推荐
@@ -121,7 +116,7 @@ class AuthorSpider:
     def __choose(self,AuthorName,AuthorCode,FirstInstitution):
         #chose = '0'
         for i in range(10):
-            chose = input("请选择需要查询的作者序号(输入exit退出)：")
+            chose = input("请选择需要查询的作者序号(输入exit退出，输入re再次获取)：")
             if chose.isdigit():
                 chose = int(chose)
                 if chose >=0 and chose <len(AuthorName):
@@ -161,7 +156,7 @@ class AuthorSpider:
     """
     根据第一页的信息，多线程获取每一页的内容
     """
-    def get_first_page(self):
+    def __get_cookies(self):
         url = "https://kns.cnki.net/kns8/Brief/GetGridTableHtml"
         data = {
             'IsSearch': 'true',
@@ -178,26 +173,26 @@ class AuthorSpider:
             'Subject': ''
             }
         text = self.session.post(url=url,data=data,headers=self.__headers).text
-        self.SearchSql = get_SearchSql(text)
-        self.get_total_page(text)
-        self.check_list = list(range(self.total_page))
-        self.df = self.get_msg(text)
-        self.__creatpath()
-        self.df.to_csv(f"{self.path}test.csv",index=False)
+        return text
 
-    def write_log(self,text):
-        with open('./log.html','w',encoding='utf-8')as f:
-            f.write(text)
+    def __get_first_page(self):
+        text = self.__get_cookies()
+        self.__SearchSql = get_SearchSql(text)
+        self.__get_total_page(text)
+        self.check_list = list(range(self.__total_page))
+        self.__df = self.__get_msg(text)
+        self.__creatpath()
+        self.__df.to_csv(f"{self.path}result.csv",index=False)
 
     # 获取总页数的函数
-    def get_total_page(self,text):
+    def __get_total_page(self,text):
         result_pattern = r'共找到<em>(\d+)</em>条结果'
         total_result = re.findall(result_pattern, text)[0]
         print(f"一共有文章{total_result}篇")
-        self.total_page = math.ceil(int(total_result)/50)
+        self.__total_page = math.ceil(int(total_result)/50)
 
     # 获取标题、作者、日期和来源
-    def get_msg(self,text):
+    def __get_msg(self,text):
         html = etree.HTML(text)
         tr_list = html.xpath('//*[@id="gridTable"]/table/tr')
         titles = []
@@ -213,20 +208,20 @@ class AuthorSpider:
             source = tr.xpath('./td[@class="source"]/a/text()')[0].strip()
             titles.append(title)
             links.append(link)
-            authors.append(self.clean(author))
+            authors.append(self.__clean(author))
             dates.append(date)
             sources.append(source)
         dic = {
-        "标题":self.clean(titles),
+        "标题":self.__clean(titles),
         "作者":[','.join(author) for author in authors],
-        "发表时间":self.clean(dates),
-        "来源":self.clean(sources),
-        "链接":self.clean(links)
+        "发表时间":self.__clean(dates),
+        "来源":self.__clean(sources),
+        "链接":self.__clean(links)
         }
         df = pd.DataFrame(dic)
         return df
     # 数据清洗，，去掉\r\n和tag
-    def clean(self,data_list):
+    def __clean(self,data_list):
         pattern = re.compile(r"(<.*?>)",re.S)
         for num in range(len(data_list)):
             data_list[num]=data_list[num].replace("\r","").replace("\n","").strip()
@@ -236,7 +231,7 @@ class AuthorSpider:
                     data_list[num]=data_list[num].replace(tag,"")
         return data_list
     # 获取其他页面信息
-    def get_other_page_text(self,url,data,page):
+    def __get_other_page_text(self,url,data,page):
         print(f"正在爬取第{page}页……")
         for i in range(5):
             try:
@@ -249,13 +244,13 @@ class AuthorSpider:
                     continue
                 else:
                     # print(f"第{page}页爬取成功！")
-                    other_df = self.get_msg(text)
-                    if (page<self.total_page) and (len(other_df)<20):
+                    other_df = self.__get_msg(text)
+                    if (page<self.__total_page) and (len(other_df)<20):
                         time.sleep(5)
                         other_df.to_csv(f'./{page}.csv')
                         print(f"第{page}页数据有误，只有{len(other_df)}条，正在重新爬取……")
                         continue
-                    self.df_list.append((page,other_df))
+                    self.__df_list.append((page,other_df))
                     # other_df.to_csv(f'./page/{page}.csv')
                     print(f'第{page}页爬取成功！第{page}页有{len(other_df)}条数据')
                     break
@@ -264,12 +259,12 @@ class AuthorSpider:
                 time.sleep(2)
                 continue
     
-    def get_other_page(self,page):
+    def __get_other_page(self,page):
         url = "https://kns.cnki.net/kns8/Brief/GetGridTableHtml"
         data = {
                 'IsSearch': 'false',
                 'QueryJson': QueryJson_choice(mode=0,name=self.name,code=self.code,institution=self.institution),
-                'SearchSql': self.SearchSql,
+                'SearchSql': self.__SearchSql,
                 'HandlerId': '12',
                 'PageName': 'defaultresult',
                 'DBCode': 'CFLS',
@@ -283,26 +278,29 @@ class AuthorSpider:
                 'IsSentenceSearch': 'false',
                 'Subject': ''
             }
-        self.get_other_page_text(url=url,data=data,page=page)
+        self.__get_other_page_text(url=url,data=data,page=page)
 
     # 线程池爬取页面
     def get_all_article(self):
-        self.get_first_page()
-        print(f'共需要爬取{self.total_page}页')
+        if (self.code == '') or (self.institution == ''):
+            print("缺少作者代码和第一机构，请检查后重新运行")
+            return 0
+        self.__get_first_page()
+        print(f'共需要爬取{self.__total_page}页')
         print('='*100)
         with ThreadPoolExecutor(20) as t:
-            for page in range(2,self.total_page+1):
-                t.submit(self.get_other_page,page=page)
+            for page in range(2,self.__total_page+1):
+                t.submit(self.__get_other_page,page=page)
         # self.__creatpath()
-        self.df_list = sorted(self.df_list)
+        self.__df_list = sorted(self.__df_list)
         # print(len(self.df_list))
-        for df in self.df_list:
-            df[1].to_csv(f"{self.path}test.csv",mode='a',header=False, index=False)
-        # self.df.to_csv(f"{self.path}test.csv")
+        for df in self.__df_list:
+            df[1].to_csv(f"{self.path}result.csv",mode='a',header=False, index=False)
+        # self.df.to_csv(f"{self.path}result.csv")
         print("="*100)
         print(f"爬取完成，已将结果保存至{self.path}")
         # print(self.check_list)
-        return self.df
+        return self.__df
     
 
 
@@ -312,7 +310,8 @@ if __name__ == '__main__':
     institution = '四川大学'
 
     cas = AuthorSpider(author_name, author_code, institution)
-    cas.get_all_article()
+    # cas.get_all_article()
+    cas.getinfo()
     # cas = AuthorSpider('王红宁')
     # print(cas.name,cas.code,cas.institution)
     # author_name, author_code, institution = cas.author_recommend()
