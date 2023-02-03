@@ -1,5 +1,4 @@
 # CnkiSpider使用指南（by@zemengchuan）
-
 GitHub链接：https://github.com/zemengchuan/CnkiSpider
 
 ## 用途：
@@ -28,13 +27,31 @@ pip install CnkiSpider
 
 ## 使用方式
 
-### AuthorSpider
+### 1、AuthorSpider
 
-Cnki目前的功能仅有通过作者搜索，所以只有AuthorSpider这一个类。使用方法如下：
+#### 基本介绍
 
-- `AuthorSpider(author_name,author_code,institution)`只有三个参数，其中author_name是必填的。如果知道作者的代码和第一机构，那么后续的过程就会非常简单。
+目前只有AuthorSpider()这一个类，也就是仅支持通过作者进行搜索。下面来介绍Author可以使用的方法和属性：
+- 基本参数
 
-- 如果知道需要爬取的作者的姓名、代码和第一机构，那么可以按照如下操作获取结果：
+	`cas = CnkiSpider.AuthorSpider(author_name,author_code='',institution='')`
+	author_name：作者姓名，必填
+	author_code：作者代码，选填
+	institution：作者第一机构，选填
+- 属性：
+	`cas.name`作者姓名
+	`cas.code`作者代码
+	`cas.institution`作者第一机构
+	`cas.path`文件存放路径
+	`cas.session`爬虫session（带有cookies）
+- 方法：
+	`cas.getinfo(save=True)`获取概览信息，默认保存在cas.path路径下的overview.csv文件中
+	`cas.author_recommend()`如果作者信息不完整（如缺少代码、缺少第一机构），可以用这个方法补全
+	`cas.get_all_article()`获取当前作者的所有文章，并保存在cas.path路径下的result.csv文件
+
+#### 使用方式
+
+如果知道需要爬取的作者的姓名、代码和第一机构，那么可以按照如下操作获取结果：
 
 ```Python
 from CnkiSpider import AuthorSpider
@@ -50,9 +67,11 @@ code = '000039361479'
 inst = '中国工程院'
 cas = AuthorSpider(author_name=name,author_code=code,institution=inst)
 cas.get_all_article()
-"""
-输出结果：
+```
+输出结果
 
+```python
+"""
 一共有文章820篇
 共需要爬取17页
 ====================================================================================================
@@ -90,7 +109,6 @@ cas.get_all_article()
 第15页爬取成功！第15页有50条数据
 ====================================================================================================
 爬取完成，已将结果保存至./钟南山-中国工程院-000039361479/
-
 """
 ```
 
@@ -117,9 +135,12 @@ author_recommend()会返回作者的姓名、代码和第一机构
 """
 # cas = AuthorSpider('钟南山')
 # print(cas.name,cas.code,cas.institution)
-#author_name, author_code, institution = cas.author_recommend()
+# author_name, author_code, institution = cas.author_recommend()
 # print(cas.name,cas.code,cas.institution
+```
+输出结果
 
+```python
 """
 输出结果为：
 
@@ -134,7 +155,7 @@ author_recommend()会返回作者的姓名、代码和第一机构
 7  钟南山
 8  钟南山
 9  钟南山  上海明品医学数据科技有限公司
-请选择需要查询的作者序号(输入exit退出)：0
+请选择需要查询的作者序号(输入exit退出，输入re再次获取)：0
 一共有文章820篇
 共需要爬取17页
 ====================================================================================================
@@ -191,6 +212,11 @@ inst = '中国工程院'
 cas = AuthorSpider(author_name=name,author_code=code,institution=inst)
 cas.getinfo()# cas.getinfo(save=False)
 
+```
+
+输出结果为：
+
+```python
 """
 输出结果为：
 
@@ -224,29 +250,32 @@ cas.getinfo()# cas.getinfo(save=False)
 """
 ```
 
-
-
 - 设置输出文件保存路径可以通过`.path=`的方式修改
 
 ```python
 from CnkiSpider import AuthorSpider
 
-"""
-将author_name,author_code,institution三个参数传入AuthorSpider中，
-再使用get_all_article()方法即可快速获取该作者的所有文章
-文件保存在当前目录下
-"""
-
 name = '钟南山' 
 code = '000039361479' 
 inst = '中国工程院'
 cas = AuthorSpider(author_name=name,author_code=code,institution=inst)
+# 设置路径
 cas.path = './new_dir/' 
 # 修改后以下两个函数保存的文件路径都会变为设置的路径，但是输出文件的名称无法更改
 cas.getinfo()
 cas.get_all_article()
 
 ```
+
+### 2、KeywordSpider
+
+（开发中……）
+
+### 3、TopicSpider
+
+（开发中……）
+
+### 4、……
 
 
 
@@ -268,6 +297,6 @@ cas.get_all_article()
   - 分类号
   - 文献来源
   - DOI
-- 尝试用异步的方式，或许会有更高的效率
 - 加入图表分析
+- 尝试用异步的方式，或许会有更高的效率
 - ……
