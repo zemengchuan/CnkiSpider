@@ -1,1 +1,1 @@
-from CnkiSpider.Author.AuthorSpider import AuthorSpider
+from CnkiSpider.CnkiSpider.CnkiSpider import CnkiSpider
